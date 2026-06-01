@@ -148,6 +148,44 @@
 
 ---
 
+## 5.5 Bedrock 모델 권한 설정
+
+> VS Code 연결 전에 반드시 완료해야 합니다. 이 설정이 없으면 Claude Code에서 Bedrock 호출이 안 됩니다.
+
+**1.** AWS 콘솔 → **IAM** → **역할(Roles)** 검색창에 `datazone_usr_role` 입력 → 본인 역할 클릭
+
+**2.** **권한 추가** → **인라인 정책 생성** → **JSON** 탭에 아래 붙여넣기:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Action": [
+      "aws-marketplace:ViewSubscriptions",
+      "aws-marketplace:Subscribe"
+    ],
+    "Resource": "*"
+  }]
+}
+```
+
+**3.** **다음** → 정책 이름: `BedrockMarketplaceAccess` → **정책 생성**
+
+**4.** 2~3분 대기 후 SMUS Space 터미널에서 확인:
+
+```bash
+aws bedrock-runtime converse \
+  --region us-east-1 \
+  --model-id us.anthropic.claude-sonnet-4-5-20250929-v1:0 \
+  --messages '[{"role":"user","content":[{"text":"안녕"}]}]' \
+  --inference-config '{"maxTokens":10}'
+```
+
+> ✅ JSON 응답이 오면 Bedrock 연동 준비 완료입니다.
+
+---
+
 ## 6. 로컬 IDE 연결하기
 
 **1.** SMUS Studio UI에서 내 **Space** 화면으로 이동
@@ -238,6 +276,7 @@ claude
 - [ ] SMUS 포털 로그인 + 프로젝트 진입
 - [ ] 데이터 파일 업로드 완료
 - [ ] Space 생성 (Remote Access **Enabled**)
+- [ ] Bedrock 권한 설정 (`BedrockMarketplaceAccess` 인라인 정책 추가 + CLI 호출 확인)
 - [ ] 로컬 VS Code 가 Space에 연결됨
 - [ ] 터미널에서 Space 환경 확인 완료
 - [ ] Claude Code 설치 + Bedrock 연동 (`/status`에 Amazon Bedrock 확인)
