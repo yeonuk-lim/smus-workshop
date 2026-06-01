@@ -289,13 +289,33 @@ if __name__ == "__main__":
 
 > ⚠️ **Python 3.12 필요**: `ag-ui-strands`는 Python 3.14를 아직 지원하지 않습니다. 반드시 3.12로 가상환경을 만드세요.
 
+### 3.1 Module 2 엔드포인트 연결 (필수)
+
+Module 2에서 배포한 SageMaker 엔드포인트 이름을 환경변수로 가져옵니다. Module 2 작업 폴더에 가서 `.env` 파일에 적힌 `SM_ENDPOINT_NAME` 값을 export 하면 됩니다.
+
 ```bash
-cd agent
+# Module 2 폴더로 이동 (clone한 위치)
+cd ~/ml-classification-with-agentic-coding
+
+# .env 파일에서 SM_ENDPOINT_NAME 값을 그대로 export
+export $(grep '^SM_ENDPOINT_NAME=' .env | xargs)
+
+# 확인
+echo $SM_ENDPOINT_NAME    # 예: occusynth-occ-734a3909
+```
+
+> 💡 이 환경변수가 설정돼 있으면 `get_occupancy` tool이 **실제 SageMaker 엔드포인트를 호출**합니다. 없으면 Mock 폴백으로 동작합니다.
+
+### 3.2 백엔드 기동
+
+```bash
+# Module 3 sample-app 의 agent 폴더로 이동
+cd ~/smus-petcare-agent/agent
 python3.12 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 
-# 로컬 모드: AGENT_PATH=/ 로 띄움
+# 로컬 모드: AGENT_PATH=/ 로 띄움 (SM_ENDPOINT_NAME은 위에서 export된 값을 그대로 사용)
 AGENT_PATH="/" AWS_REGION=us-east-1 python main.py
 ```
 
