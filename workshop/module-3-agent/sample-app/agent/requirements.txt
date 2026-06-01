@@ -1,0 +1,4 @@
+strands-agents
+ag-ui-strands
+bedrock-agentcore
+uvicorn
