@@ -10,9 +10,10 @@
 > SMUS에서는 **데이터만 가져오고**, 그 이후 모든 개발은 VSCode에서 AI 코딩 도구와 함께 **직접 코드로** 진행한다.
 > SMUS Space는 데이터에 가까운 곳에 있는 **개발/실행 컴퓨트 환경** 역할만 한다.
 
-> 🔗 **디커플링 원칙 (ML 파트와 독립)**: 곤수님 ML 아이템/데이터셋이 미정이므로 내 파트는 거기에 종속되지 않게 만든다.
-> - **Module 1**: 데이터에 무관하게(data-agnostic) **모든 절차/구조를 미리 완성**, 실제 데이터만 나중에 교체.
-> - **Module 3**: ML을 활용하는 tool(`predict_anxiety`)을 **Mock으로** 구현. 나중에 Mock 내부만 실제 모델 호출로 교체.
+> 🔗 **Module 연결**: Module 2(곤수님)는 **재실 감지(occupancy) ML 분류** 모델을 만든다.
+> ([github.com/gonsoomoon-ml/ml-classification-with-agentic-coding](https://github.com/gonsoomoon-ml/ml-classification-with-agentic-coding))
+> - **Module 1**: 데이터에 무관하게(data-agnostic) 절차/구조 완성.
+> - **Module 3**: 이 occupancy 모델을 `get_occupancy` tool로 호출(SageMaker 엔드포인트). 엔드포인트가 없으면 Mock 폴백.
 
 ## 2. 전체 흐름 (End-to-End 스토리)
 ```
@@ -84,16 +85,16 @@
 [행동] TV로 진정 음악 재생
 ```
 
-### 에이전트 Tool (전부 Mock — 데이터/ML과 디커플링)
+### 에이전트 Tool
 | Tool | 역할 | 비고 |
 |------|------|------|
-| `get_occupancy()` | 주인 재실 여부 | mock |
+| `get_occupancy()` | 주인 재실 여부 | **Module 2 occupancy ML 엔드포인트 호출** (없으면 Mock 폴백) |
 | `get_device_states()` | 짖음/움직임/소음 등 센서값 | mock |
-| `predict_anxiety(features)` | 불안도 예측 | **Mock** (나중에 내부만 실제 ML 모델 호출로 교체) |
+| `predict_anxiety(features)` | 불안도 예측 | mock |
 | `play_music_on_tv(playlist)` | 진정 음악 재생 | mock (행동) |
 
 > ⚠️ 실제 SmartThings API(OAuth/디바이스 디스커버리)는 시간/핵심 모두 아니므로 **Mock 함수**로 처리.
-> 🔗 `predict_anxiety`는 곤수님 ML 아이템 확정 전이므로 **Mock으로 그럴듯한 값을 반환**. 인터페이스(입력 features → 출력 score)만 고정해두면 추후 실제 모델로 교체 용이.
+> 🔗 `get_occupancy`는 Module 2의 재실감지 모델(가전 전력 → occupancy)과 연결. 14개 feature는 Mock으로 생성해 `{"buffer":[record]}`로 엔드포인트 호출, `SM_ENDPOINT_NAME` 없으면 전력 기반 Mock 규칙 폴백.
 
 ### 진행 단계
 1. Agentic AI 개념 + 아키텍처 (LLM + tool use, Strands 구조) — 짧게
@@ -114,15 +115,11 @@ workshop/
 └── 99-cleanup.md          # 리소스 정리
 ```
 
-## 9. 확정 상태 / 남은 결정
+## 9. 확정 상태
 **확정됨**
 - ✅ Agent 시나리오: 스마트싱스 펫케어 — 강아지 불안 케어 (외출+불안↑ → TV 음악)
-- ✅ Agent 스택: Strands Agents → AgentCore Runtime → WebUI
-- ✅ 디커플링: Module 1은 data-agnostic, Module 3의 `predict_anxiety`는 Mock
-
-**나중에 (ML 파트 진행되면)**
-- [ ] 실습 데이터셋 확정 → Module 1에 파일만 교체
-- [ ] 곤수님 ML 아이템/모델 종류 → Module 3 `predict_anxiety` Mock을 실제 호출로 교체
-
-**지금 정하면 좋은 것**
-- [ ] AI 코딩 도구 표준: Kiro CLI vs Claude Code
+- ✅ Agent 스택: Strands Agents → AG-UI → CopilotKit → AgentCore Runtime (IAM 인증, Cognito 없음)
+- ✅ AI 코딩 도구: Claude Code (Bedrock 연동) / IDE: VS Code
+- ✅ 리전: us-east-1, 모델: claude-sonnet-4-5
+- ✅ Module 2 = 재실감지 ML (곤수님 repo) → Module 3 `get_occupancy`가 SageMaker 엔드포인트로 호출, 없으면 Mock 폴백
+- ✅ Module 1·2·3 + sample-app 모두 작성/검증 완료

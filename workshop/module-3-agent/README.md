@@ -21,9 +21,11 @@
 **스마트싱스 펫케어 — 강아지 불안 케어 에이전트**
 
 ```
-[신호 수집]  주인 재실 여부 + 디바이스 상태(짖음/움직임/소음)
+[재실 예측]  가전 전력 → 재실감지 ML 모델로 주인 재실 여부 예측  ← Module 2 모델
       ↓
-[판단]      ML 모델(지금은 Mock)로 "강아지 불안도" 예측
+[신호 수집]  강아지 디바이스 상태(짖음/움직임/소음)
+      ↓
+[판단]      "강아지 불안도" 예측
       ↓
 [추론]      주인이 외출했고 불안도가 높으면? → 무엇을 할지 LLM이 결정
       ↓
@@ -36,7 +38,7 @@
 
 > ⚠️ 우리가 쓰는 건 **Strands Agents(오픈소스 프레임워크)** 입니다. Amazon Bedrock의 매니지드 "Agents" 기능이 아닙니다. LLM 추론만 Bedrock 모델을 씁니다.
 >
-> 🔗 디바이스 연동과 ML 예측은 전부 **Mock**입니다. 나중에 `predict_anxiety` 내부만 실제 ML 모델 호출로 바꾸면 됩니다.
+> 🔗 **Module 2 연결**: `get_occupancy`는 Module 2의 **재실감지 ML 모델**(가전 전력 → 재실 여부)을 SageMaker 엔드포인트로 호출합니다. 엔드포인트가 없으면 Mock 폴백으로 동작합니다. 강아지 디바이스 신호와 불안도 예측은 Mock입니다.
 
 ### 전체 구조
 ```
@@ -88,17 +90,56 @@ smus-petcare-agent/
 Strands에서 도구는 그냥 **`@tool`을 붙인 파이썬 함수**입니다.
 함수의 **docstring과 타입힌트**가 그대로 LLM에게 "이 도구가 뭔지" 설명으로 전달됩니다.
 
+#### (A) `get_occupancy` — Module 2 재실감지 ML 모델 호출
+
+가전 전력 feature 14개로 **주인 재실 여부**를 예측합니다. Module 2에서 만든 SageMaker 엔드포인트를 호출하고, 엔드포인트가 없으면 Mock으로 동작합니다.
+feature 14개는 실제로는 전력 미터에서 계산되지만, 여기서는 **Mock으로 생성**합니다.
+
 ```python
-import random
+import os, json, random
 from strands import tool
 
 
+def _mock_power_features() -> dict:
+    """Module 2(재실 감지 ML)의 입력 feature 14개를 Mock으로 생성한다."""
+    high = random.random() > 0.5  # 전력 높음(활동) vs 낮음(빈집)
+    agg = round(random.uniform(500, 1600) if high else random.uniform(60, 200), 1)
+    return {
+        "aggregate_w": agg, "minute_of_day": random.randint(0, 1439),
+        "dow": random.randint(0, 6), "is_daylight": random.choice([0, 1]),
+        "month": random.choice([6, 7, 8, 9]), "outdoor_temp_c": round(random.uniform(20, 34), 1),
+        "aggregate_missing": 0.0, "agg_roll_mean_30": round(agg * random.uniform(0.8, 1.1), 1),
+        "agg_roll_std_30": round(random.uniform(100, 400) if high else random.uniform(0, 60), 1),
+        "agg_delta_15": round(random.uniform(50, 500) if high else random.uniform(-80, 80), 1),
+        "aircon_active_30": float(random.randint(0, 30)) if high else 0.0,
+        "kettle_active_30": 0.0, "microwave_active_30": 0.0,
+        "tv_active_30": float(random.randint(0, 30)) if high else 0.0,
+    }
+
+
 @tool
-def get_occupancy() -> str:
-    """집에 주인이 있는지(재실 여부) 확인한다. 'home' 또는 'away'를 반환."""
-    return random.choice(["home", "away"])
+def get_occupancy() -> dict:
+    """가전 전력 데이터로 주인의 재실 여부를 예측한다 (Module 2의 재실감지 ML 모델 호출).
+    occupancy('home'/'away'), proba_occupied(0~1)를 반환한다."""
+    features = _mock_power_features()
+    endpoint = os.getenv("SM_ENDPOINT_NAME")
+    if endpoint:  # Module 2 SageMaker 엔드포인트 호출
+        import boto3
+        rt = boto3.client("sagemaker-runtime", region_name=os.getenv("AWS_REGION", "us-east-1"))
+        resp = rt.invoke_endpoint(EndpointName=endpoint, ContentType="application/json",
+            Accept="application/json", Body=json.dumps({"buffer": [features]}))
+        proba = json.loads(resp["Body"].read())[0]["proba_occupied"]
+    else:  # Mock 폴백: 전력 수준 기반
+        proba = min(0.99, max(0.01, features["aggregate_w"] / 1500))
+    return {"occupancy": "home" if proba > 0.5 else "away", "proba_occupied": round(proba, 3)}
+```
 
+> 🔗 곤수님 Module 2의 `launch_invoke.py`와 동일한 호출 규약입니다: `{"buffer": [record]}` 전송 → `[{"proba_occupied":..., "pred_occupied":...}]` 응답.
+> `SM_ENDPOINT_NAME` 환경변수만 설정하면 실제 모델로, 없으면 Mock으로 동작합니다.
 
+#### (B) 나머지 도구 — 강아지 디바이스/행동 (Mock)
+
+```python
 @tool
 def get_device_states() -> dict:
     """강아지 관련 디바이스 센서 값을 읽는다.
@@ -114,7 +155,6 @@ def get_device_states() -> dict:
 def predict_anxiety(barking_level: int, motion: int, noise_db: int) -> dict:
     """디바이스 센서 값으로 강아지의 불안도를 예측한다.
     score(0.0~1.0)와 level('low'/'medium'/'high')을 반환."""
-    # Mock: 추후 이 부분만 Module 2의 실제 ML 모델 호출로 교체
     score = min(1.0, (barking_level + motion + (noise_db - 30) / 6) / 25)
     level = "high" if score > 0.6 else "medium" if score > 0.3 else "low"
     return {"score": round(score, 2), "level": level}
@@ -140,10 +180,10 @@ from ag_ui_strands import StrandsAgent, StrandsAgentConfig, create_strands_app
 
 SYSTEM_PROMPT = """너는 스마트싱스 반려견 펫케어 에이전트다.
 요청을 받으면 도구를 사용해 다음을 수행해라:
-1. get_occupancy 로 주인의 재실 여부를 확인한다.
+1. get_occupancy 로 주인의 재실 여부를 확인한다 (가전 전력 기반 ML 예측, occupancy='home'/'away').
 2. get_device_states 로 디바이스 센서 값을 읽는다.
 3. predict_anxiety 로 강아지의 불안도를 예측한다.
-4. 주인이 외출(away) 중이고 불안도가 'high'이면, play_music_on_tv 로 진정 음악을 재생한다.
+4. 주인이 외출(occupancy='away') 중이고 불안도가 'high'이면, play_music_on_tv 로 진정 음악을 재생한다.
    그 외에는 아무 행동도 하지 않는다.
 마지막에 점검 결과와 무엇을 왜 했는지 한국어로 간단히 설명해라."""
 
@@ -328,7 +368,7 @@ python invoke_runtime.py
 ---
 
 ## 🎁 (선택) 더 해보기
-- `predict_anxiety` 내부를 **Module 2의 실제 ML 모델 호출**로 교체
+- `SM_ENDPOINT_NAME` 환경변수를 설정해 `get_occupancy`가 **Module 2의 실제 SageMaker 엔드포인트**를 호출하도록 연결
 - 진정 액션 추가(`dim_lights` 등) → 에이전트가 상황에 따라 선택하게
 - 시스템 프롬프트를 바꿔 판단 기준 조정
 
