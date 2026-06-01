@@ -138,19 +138,25 @@
 
 ## 4. 데이터 올리기 (가장 간단한 경로)
 
-> 목표: CSV(또는 JSON) 파일 하나를 프로젝트에 올린다. 복잡한 설정 없음.
+> 목표: 워크샵용 샘플 CSV(`occusynth.csv`)를 프로젝트에 올린다.
 
-**1.** 프로젝트 페이지 **중앙의 `Data` 섹션**을 찾습니다.
+**1.** 워크샵용 샘플 데이터 다운로드 (브라우저에서 클릭하면 받아짐):
 
-**2.** **S3 buckets** 클릭하고, **Project bucket** → **Amazon-sagemaker-** → **shared**를 누릅니다.
+   👉 [occusynth.csv 다운로드](https://raw.githubusercontent.com/gonsoomoon-ml/ml-classification-with-agentic-coding/main/data/occusynth.csv) (약 47MB)
 
-**3.** **shared** 오른쪽 메뉴 버튼을 누르고 **Upload files**를 클릭합니다.
+   > 이 데이터는 **Module 2(재실 감지 ML)** 의 학습용 raw 데이터입니다. 가전 전력 + 외기온 + `occupied`(재실 1/0) 라벨 포함.
+
+**2.** 프로젝트 페이지 **중앙의 `Data` 섹션**을 찾습니다.
+
+**3.** **S3 buckets** 클릭하고, **Project bucket** → **Amazon-sagemaker-** → **shared**를 누릅니다.
+
+**4.** **shared** 오른쪽 메뉴 버튼을 누르고 **Upload files**를 클릭합니다.
 
 <img src="../../asset/setup11.png" alt="setup11" width="70%" />
 
-**4.** **Click to upload** 클릭하거나, **CSV / JSON 파일을 드래그 앤 드롭**
+**5.** **Click to upload** 클릭하거나, 1번에서 다운로드한 **`occusynth.csv` 파일을 드래그 앤 드롭**
 
-**5.** 업로드 완료를 기다립니다.
+**6.** 업로드 완료를 기다립니다.
 
 ✅ 이제 데이터가 프로젝트에 등록되었습니다.
 
