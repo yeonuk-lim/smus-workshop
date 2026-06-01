@@ -92,31 +92,18 @@
 
 ---
 
-## 2.5 Bedrock 모델 권한 설정
+## 2.5 IAM 권한 추가 (AdministratorAccess)
 
-> 도메인 생성 직후 바로 합니다. 나중에 Claude Code에서 Bedrock 호출이 안 되는 것을 방지합니다.
+> 도메인 생성 직후 바로 합니다. Bedrock 호출, SageMaker 엔드포인트 생성 등 워크샵 전체에서 필요한 권한을 한 번에 부여합니다.
 
 **1.** AWS 콘솔 → **IAM** → **역할(Roles)** 검색창에 `datazone_usr_role` 입력 → 본인 역할 클릭
 
-**2.** **권한 추가** → **인라인 정책 생성** → **JSON** 탭에 아래 붙여넣기:
+**2.** **권한 추가** → **정책 연결**
 
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [{
-    "Effect": "Allow",
-    "Action": [
-      "aws-marketplace:ViewSubscriptions",
-      "aws-marketplace:Subscribe"
-    ],
-    "Resource": "*"
-  }]
-}
-```
+**3.** 검색창에 `AdministratorAccess` 입력 → **AdministratorAccess** 체크 → **권한 추가**
 
-**3.** **다음** → 정책 이름: `BedrockMarketplaceAccess` → **정책 생성**
-
-> ✅ 이후 Bedrock 호출 시 2~3분 정도 전파 시간이 필요합니다. Space 생성하는 동안 자동으로 완료됩니다.
+> ✅ 이후 권한 전파에 2~3분 정도 걸립니다. Space 생성하는 동안 자동으로 완료됩니다.
+> ⚠️ 이 워크샵은 데모 목적이라 AdministratorAccess를 사용합니다. 실제 프로덕션에서는 최소 권한 원칙으로 좁혀 쓰세요.
 
 ---
 
@@ -272,7 +259,7 @@ claude
 - [ ] SMUS 포털 로그인 + 프로젝트 진입
 - [ ] 데이터 파일 업로드 완료
 - [ ] Space 생성 (Remote Access **Enabled**)
-- [ ] Bedrock 권한 설정 (`BedrockMarketplaceAccess` 인라인 정책 추가 + CLI 호출 확인)
+- [ ] IAM 권한 추가 (`AdministratorAccess` 정책 연결)
 - [ ] 로컬 VS Code 가 Space에 연결됨
 - [ ] 터미널에서 Space 환경 확인 완료
 - [ ] Claude Code 설치 + Bedrock 연동 (`/status`에 Amazon Bedrock 확인)
