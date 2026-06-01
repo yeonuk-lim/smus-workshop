@@ -92,6 +92,34 @@
 
 ---
 
+## 2.5 Bedrock 모델 권한 설정
+
+> 도메인 생성 직후 바로 합니다. 나중에 Claude Code에서 Bedrock 호출이 안 되는 것을 방지합니다.
+
+**1.** AWS 콘솔 → **IAM** → **역할(Roles)** 검색창에 `datazone_usr_role` 입력 → 본인 역할 클릭
+
+**2.** **권한 추가** → **인라인 정책 생성** → **JSON** 탭에 아래 붙여넣기:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Action": [
+      "aws-marketplace:ViewSubscriptions",
+      "aws-marketplace:Subscribe"
+    ],
+    "Resource": "*"
+  }]
+}
+```
+
+**3.** **다음** → 정책 이름: `BedrockMarketplaceAccess` → **정책 생성**
+
+> ✅ 이후 Bedrock 호출 시 2~3분 정도 전파 시간이 필요합니다. Space 생성하는 동안 자동으로 완료됩니다.
+
+---
+
 ## 3. SMUS 포털 접속 & 프로젝트 열기
 
 **1.** 도메인 상세 페이지의 **통합스튜디오 열기** 접속 (형식: `https://<domain-id>.sagemaker.<region>.on.aws`)
@@ -145,44 +173,6 @@
 **5.** **Create and start space** → Space가 시작될 때까지 대기 (`Running` 상태까지 2분정도 대기가 필요)
 
 <img src="../../asset/setup13.png" alt="setup13" width="70%" />
-
----
-
-## 5.5 Bedrock 모델 권한 설정
-
-> VS Code 연결 전에 반드시 완료해야 합니다. 이 설정이 없으면 Claude Code에서 Bedrock 호출이 안 됩니다.
-
-**1.** AWS 콘솔 → **IAM** → **역할(Roles)** 검색창에 `datazone_usr_role` 입력 → 본인 역할 클릭
-
-**2.** **권한 추가** → **인라인 정책 생성** → **JSON** 탭에 아래 붙여넣기:
-
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [{
-    "Effect": "Allow",
-    "Action": [
-      "aws-marketplace:ViewSubscriptions",
-      "aws-marketplace:Subscribe"
-    ],
-    "Resource": "*"
-  }]
-}
-```
-
-**3.** **다음** → 정책 이름: `BedrockMarketplaceAccess` → **정책 생성**
-
-**4.** 2~3분 대기 후 SMUS Space 터미널에서 확인:
-
-```bash
-aws bedrock-runtime converse \
-  --region us-east-1 \
-  --model-id us.anthropic.claude-sonnet-4-5-20250929-v1:0 \
-  --messages '[{"role":"user","content":[{"text":"안녕"}]}]' \
-  --inference-config '{"maxTokens":10}'
-```
-
-> ✅ JSON 응답이 오면 Bedrock 연동 준비 완료입니다.
 
 ---
 
