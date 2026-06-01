@@ -58,35 +58,35 @@
 2. 우측 상단 **리전 선택기**에서 **워크샵 리전(예: us-east-1)** 선택
    - ⚠️ IAM Identity Center를 켜둔 리전과 **동일**해야 합니다.
 3. **도메인** → **도메인 생성** 선택
-   ![setup1](../../asset/setup1.png)
+   <img src="../../asset/setup1.png" alt="setup1" width="70%" />
 
-   ![setup2](../../asset/setup2.png)
+   <img src="../../asset/setup2.png" alt="setup2" width="70%" />
 4. VPC 안내가 나오면 **VPC 생성** 클릭
-   ![setup3](../../asset/setup3.png)
+   <img src="../../asset/setup3.png" alt="setup3" width="70%" />
 5. **빠른 스택 생성** 에서 **스택 생성** 클릭
-   ![setup4](../../asset/setup4.png)
+   <img src="../../asset/setup4.png" alt="setup4" width="70%" />
    잠시 기다렸다가 완료 확인
-   ![setup5](../../asset/setup5.png)
+   <img src="../../asset/setup5.png" alt="setup5" width="70%" />
    다시 SageMaker 설정 화면에서 **VPC 선택** 클릭시 방금 생성한 VPC로 설정 확인
-   ![setup6](../../asset/setup6.png)
+   <img src="../../asset/setup6.png" alt="setup6" width="70%" />
    **계속** 버튼 클릭
 6. **IAM Identity Center 사용자 생성** 화면에서 개인 이메일과 이름 입력
    - 여기서 지정한 사용자가 SMUS **관리자**가 됩니다. 
-   ![setup7](../../asset/setup7.png)
+   <img src="../../asset/setup7.png" alt="setup7" width="70%" />
 
 7. **도메인 생성** 클릭 → 생성 완료까지 대기 (수 분)
 
 > 📧 SSO 사용자 이메일로 **초대 메일**이 옵니다. **Accept invitation** 버튼 눌러서 비밀번호를 설정하면 로그인 준비 완료.
-   ![setup8](../../asset/setup8.png)
+   <img src="../../asset/setup8.png" alt="setup8" width="70%" />
 ---
 
 ## 3. SMUS 포털 접속 & 프로젝트 열기
 
 1. 도메인 상세 페이지의 **통합스튜디오 열기** 접속
    - 형식: `https://<domain-id>.sagemaker.<region>.on.aws`
-![setup9](../../asset/setup9.png)
+<img src="../../asset/setup9.png" alt="setup9" width="70%" />
 2. **IAM Identity Center(SSO)** 계정으로 로그인 (2단계에서 만든 사용자)
-![setup10](../../asset/setup10.png)
+<img src="../../asset/setup10.png" alt="setup10" width="70%" />
 3. 미리 만들어진 **admin-project-** 클릭
 
 > 🔎 **프로젝트(Project)란?** 데이터·환경·권한이 묶이는 작업 공간입니다. 워크샵 동안 우리는 이 프로젝트 하나 안에서 모든 걸 합니다.
@@ -100,7 +100,7 @@
 1. 프로젝트 페이지 **중앙의 `Data` 섹션**을 찾습니다.
 2. **S3 buckets** 클릭하고, **Porject bucket** -> **Amazon-sagemaker-** -> **shared**를 누릅니다.
 3. **shared** 오른쪽 메뉴 버튼을 누르고 **Upload files**를 클릭합니다.
-![setup11](../../asset/setup11.png)
+<img src="../../asset/setup11.png" alt="setup11" width="70%" />
 4. **Click to upload** 클릭하거나, **CSV / JSON 파일을 드래그 앤 드롭**
 5. 업로드 완료를 기다립니다.
 
@@ -113,12 +113,12 @@
 > **Code Space**는 클라우드에 떠 있는 내 개발 환경(컴퓨트)입니다. 로컬 IDE를 여기에 연결합니다.
 
 1. 프로젝트에서 **Compute** → **Spaces** 로 이동
-![setup12](../../asset/setup12.png)
+<img src="../../asset/setup12.png" alt="setup12" width="70%" />
 2. 새로운 Space를 생성하기 위해 **Create space**(Space 생성) 클릭
 3. Space 이름 입력(e.g. SMUS-ML-Space) 그리고 Application을 **Code Editor**로 변경합니다. Instance 타입은 **ml.m5.xlarge**로 변경합니다. EBS Space Storage (GB)는 **50GB**로 변경합니다.
 4. ⭐ **Remote Access** 토글을 **Enabled(켜기)** — **이게 핵심입니다.** 로컬 IDE 연결에 필수.
 5. **Create and start space** → Space가 시작될 때까지 대기 (`Running` 상태까지 2분정도 대기가 필요)
-![setup13](../../asset/setup13.png)
+<img src="../../asset/setup13.png" alt="setup13" width="70%" />
 
 ---
 
@@ -127,13 +127,13 @@
 1. SMUS Studio UI에서 내 **Space** 화면으로 이동
 2. **Open in VS Code** 버튼 클릭
    - ⚠️ VS Code가 **로컬 PC에 미리 설치**되어 있어야 합니다.
-![setup14](../../asset/setup14.png)
+<img src="../../asset/setup14.png" alt="setup14" width="70%" />
 3. 로컬 VS Code가 자동으로 열리고, Space에 연결됩니다. 관련해서 팝업이 뜨면 확인이나 신뢰하기를 선택합니다.
-![setup15](../../asset/setup15.png)
-![setup16](../../asset/setup16.png)
+<img src="../../asset/setup15.png" alt="setup15" width="70%" />
+<img src="../../asset/setup16.png" alt="setup16" width="70%" />
 4. 이전 챕터에서 올린 데이터가 파일 탐색기에서 확인되는지 검사합니다.
-![setup17](../../asset/setup17.png)
-![setup18](../../asset/setup18.png)
+<img src="../../asset/setup17.png" alt="setup17" width="70%" />
+<img src="../../asset/setup18.png" alt="setup18" width="70%" />
 
 
 > ✅ 로컬이 아니라 **Space(클라우드)** 의 파일/환경이 보이면 연결 성공입니다.
