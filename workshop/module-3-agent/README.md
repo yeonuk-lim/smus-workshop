@@ -53,6 +53,70 @@
 
 ---
 
+## 0.1 개념: AI Agent란?
+
+LLM은 **질문에 답**할 수 있습니다. Agent는 **실제로 행동**할 수 있습니다. 그 차이를 만드는 것이 아래 구성요소입니다.
+
+| 구성요소 | 역할 | 우리 펫케어 에이전트에서는 |
+|----------|------|---------------------------|
+| **Model (LLM)** | 추론·판단의 두뇌 | Bedrock Claude — 상황 종합 판단 |
+| **Tools** | 외부 세계와 상호작용하는 능력 (API/함수 호출) | `get_occupancy`, `get_device_states`, `predict_anxiety`, `play_music_on_tv` |
+| **Instructions (Prompt)** | 역할·목표·행동 규칙 | 시스템 프롬프트 ("외출+불안 high면 음악 재생") |
+| **Memory** | 대화 맥락 유지 (단기/장기) | 대화 히스토리 (한 세션 내 맥락) |
+
+> 💡 핵심: 개발자는 LLM에게 **도구만 쥐여주고**, "언제 어떤 도구를 쓸지"는 **에이전트가 스스로 판단**합니다. 이것이 `if-else` 자동화와 다른 점입니다.
+
+---
+
+## 0.2 개념: Strands Agents & Agent Loop
+
+**Strands Agents**는 AWS의 오픈소스 에이전트 프레임워크입니다. `Model + Tools + Prompt`만 정의하면, "추론 → 도구 호출 → 결과 반영 → 다시 추론"을 반복하는 **Agent Loop**를 알아서 돌려줍니다.
+
+```mermaid
+flowchart LR
+    A[사용자 입력 + 컨텍스트] --> Loop
+    subgraph Loop[Agent Loop · 반복]
+        direction TB
+        B["추론 (LLM)"] --> C["도구 선택"]
+        C --> D["도구 실행"]
+        D --> B
+    end
+    Loop --> E[최종 응답]
+```
+
+**동작 방식** (펫케어 예시):
+1. **추론**: "강아지 상태를 점검하려면 먼저 주인이 집에 있는지 봐야겠다"
+2. **도구 선택 → 실행**: `get_occupancy()` 호출 → `away` (결과가 대화에 누적됨)
+3. **다시 추론**: "외출 중이네. 이제 센서를 보자" → `get_device_states()` → `predict_anxiety()`
+4. 충분한 정보가 모이면 **행동**(`play_music_on_tv`) 후 **최종 응답** 생성 (`end_turn`)
+
+> 매 반복마다 도구 결과가 **대화 히스토리에 누적**되어, 모델이 여러 단계를 거쳐 스스로 판단을 발전시킵니다. 우리는 `@tool` 함수 4개만 작성하면 이 루프는 Strands가 처리합니다.
+
+---
+
+## 0.3 개념: Amazon Bedrock AgentCore (인프라 레이어)
+
+코드로 만든 에이전트를 **프로덕션에서 안전하게 운영**하려면 서버·확장·보안·세션관리가 필요합니다. **AgentCore**는 그걸 대신 해주는 **에이전트 전용 인프라/운영 레이어**입니다.
+
+```
+┌─────────────────────────────────────────────┐
+│  ① 애플리케이션 (에이전트 로직)              │  ← Strands Agents (우리가 작성하는 코드)
+├─────────────────────────────────────────────┤
+│  ② AgentCore (운영/인프라 레이어)            │  ← Runtime·Memory·Gateway·Identity·Observability
+│     - Runtime: 서버리스 실행 + 세션 격리     │     (이 워크샵은 Runtime만 사용)
+├─────────────────────────────────────────────┤
+│  ③ 모델 (LLM)                                │  ← Amazon Bedrock (Claude)
+└─────────────────────────────────────────────┘
+```
+
+- **Bedrock = "에이전트를 빌드"**, **AgentCore = "에이전트를 배포·운영"** 하는 레이어입니다.
+- AgentCore는 7개 매니지드 서비스(Runtime / Memory / Identity / Gateway / Code Interpreter / Browser / Observability)로 구성되며, **필요한 것만 골라 쓸 수 있습니다.**
+- **이 워크샵에서는 `Runtime` 하나만** 사용합니다 — 우리가 만든 Strands 에이전트를 서버리스로 배포·실행하는 부분(섹션 5).
+
+> ⚠️ AgentCore는 Amazon Bedrock의 매니지드 "Agents" 기능과 **다릅니다**. 에이전트 로직은 우리가 Strands로 직접 작성하고, AgentCore는 그걸 올려 돌리는 실행 환경입니다.
+
+---
+
 ## 1. 환경 준비
 
 > Module 1에서 연결한 **VS Code(= SMUS Space에 연결된 창)** 의 터미널에서 진행합니다.
