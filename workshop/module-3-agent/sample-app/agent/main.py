@@ -117,6 +117,12 @@ agent_path = os.getenv("AGENT_PATH", "/invocations")
 app = create_strands_app(agui_agent, agent_path)
 
 
+# AgentCore Runtime이 READY로 판단하려면 /ping 200이 필요하다 (AG-UI 프로토콜에서도 동일)
+@app.get("/ping")
+async def ping():
+    return {"status": "healthy"}
+
+
 if __name__ == "__main__":
     import uvicorn
 

@@ -5,7 +5,7 @@
 > **이 모듈에서 만드는 것**
 > 1. **Strands Agents**로 펫케어 에이전트를 코드로 작성 (도구 4개)
 > 2. **CopilotKit 채팅 UI**(웹)에 연결해서 로컬에서 대화
-> 3. **Amazon Bedrock AgentCore Runtime**에 배포 (IAM 인증, Cognito 없음)
+> 3. **Amazon Bedrock AgentCore Runtime**에 배포하고 **웹UI를 클라우드 에이전트에 연결** (AG-UI 유지 + Cognito 인증, 스크립트 원클릭)
 >
 > 끝나면: "신호를 종합해 스스로 판단·행동하는 에이전트"를 직접 만들고, 웹 UI로 대화하고, 클라우드에 올려본 상태가 됩니다.
 
@@ -43,13 +43,16 @@
 ### 전체 구조
 ```
 [브라우저] CopilotKit 채팅 UI
-      │  (인증 없음)
+      │
       ▼
-[Next.js route.ts]  ──AG-UI 프로토콜──►  [Strands 에이전트 (FastAPI)]
-                                              │
-                                              ▼
-                                         Bedrock 모델(LLM) + 도구 4개
+[Next.js route.ts]  ──AG-UI 프로토콜──►  [Strands 에이전트]
+      │                                       │
+      │  • 로컬 모드: localhost:8080 (인증 없음)
+      │  • 클라우드 모드: AgentCore Runtime (Cognito JWT)
+      ▼                                       ▼
+   .env.local 로 분기                    Bedrock 모델(LLM) + 도구 4개
 ```
+> 같은 AG-UI 프로토콜이라 **프론트 코드는 그대로**, `.env.local`만 바뀌면 로컬↔클라우드를 오갑니다.
 
 ---
 
@@ -335,10 +338,11 @@ curl http://localhost:8080/ping
 
 ```bash
 cd frontend
-cp .env.local.example .env.local   # AGENT_URL=http://localhost:8080
 npm install
 npm run dev                         # http://localhost:3300
 ```
+
+> `.env.local`은 기본값이 **로컬 모드**(`AGENT_URL=http://localhost:8080`)로 들어 있어 그대로 쓰면 됩니다.
 
 브라우저에서 **http://localhost:3300** 접속 → 오른쪽 사이드바 채팅에 입력:
 
@@ -358,67 +362,86 @@ npm run dev                         # http://localhost:3300
    → 결과를 AG-UI 이벤트로 스트리밍 → 사이드바에 표시
 ```
 
-> 💡 `frontend/.env.local`의 `AGENT_URL`만 바꾸면 어떤 에이전트로도 붙일 수 있습니다. **여기엔 인증이 전혀 없습니다.**
+> 💡 지금은 **로컬 모드**라 `frontend/.env.local`의 `AGENT_URL`로 붙고 **인증이 없습니다.** 다음 섹션 5에서 이 그대로를 **클라우드(AgentCore Runtime)** 에 올리고 **Cognito 인증**을 붙입니다 — 프론트 코드는 그대로 두고요.
 
 ---
 
-## 5. AgentCore Runtime에 배포 (IAM 인증 — Cognito 없음)
+## 5. AgentCore Runtime에 배포 + 웹UI 클라우드 연결 (AG-UI + Cognito)
 
-이제 로컬에서 잘 도는 에이전트를 클라우드(**AgentCore Runtime**)에 올립니다.
-인증은 **IAM(SigV4)** 으로 갑니다 — Cognito·JWT 설정이 전혀 필요 없습니다.
+이제 로컬에서 잘 도는 에이전트를 클라우드(**AgentCore Runtime**)에 올리고, **CopilotKit 웹UI를 그대로 클라우드 에이전트에 연결**합니다.
+
+- 프로토콜은 로컬과 동일한 **AG-UI** 를 유지합니다 (`--protocol AGUI`).
+- 인증은 **Cognito(JWT)** 를 씁니다. 브라우저는 인증을 몰라도 되고, **Next.js 서버(route.ts)가 Cognito 토큰을 받아 대신 호출**합니다.
+- 이 모든 과정(Cognito 생성 → 배포 → 프론트 연결)을 **스크립트 하나로** 처리합니다.
+
+> 🧭 **왜 AG-UI를 유지하나?** 로컬에서 쓰던 `create_strands_app`(AG-UI 서버)을 그대로 클라우드에 올리는 구조라, **프론트 코드 변경 없이** `.env.local`만 바뀌면 로컬↔클라우드를 오갈 수 있습니다.
 
 ### 5.1 starter toolkit 설치
 
 ```bash
-cd ../agent          # 에이전트 폴더에서
+cd ../agent          # 에이전트 폴더에서 (로컬 실행에 쓴 .venv 그대로)
 source .venv/bin/activate
 pip install bedrock-agentcore-starter-toolkit
 ```
 
-### 5.2 배포
+### 5.2 원클릭 배포 스크립트 실행
+
+제공된 `deploy-agentcore.sh` 하나면 **Cognito 생성 → AG-UI+JWT 설정 → 배포 → ARN 조회 → 프론트 `.env.local` 자동 기록**까지 끝납니다.
 
 ```bash
-# 진입점 지정 (entrypoint = main.py, app 객체)
-agentcore configure --entrypoint main.py
-
-# AWS에 배포 (컨테이너 빌드 → ECR → Runtime 생성까지 자동)
-agentcore launch
+./deploy-agentcore.sh
 ```
 
-> ℹ️ `agentcore`가 **linux/arm64 컨테이너 빌드 → ECR 푸시 → Runtime 생성**을 자동으로 해줍니다.
-> `authorizerConfiguration`을 지정하지 않으므로 **기본 IAM 인증**으로 배포됩니다. (= Cognito 불필요)
->
-> ⚠️ 버전에 따라 배포 명령이 `agentcore launch` 또는 `agentcore deploy`일 수 있습니다. 막히면 `agentcore --help`로 확인하세요.
->
-> 📋 배포가 끝나면 출력되는 **Agent Runtime ARN**을 복사해 두세요.
+스크립트가 하는 일 (한 단계씩):
+1. `agentcore identity setup-cognito` — Cognito 사용자 풀 생성, 자격정보를 `.agentcore_identity_user.env`에 저장
+2. `agentcore configure -e main.py --protocol AGUI --authorizer-config '{...customJWTAuthorizer...}'` — **AG-UI 프로토콜 + Cognito JWT 인증**으로 배포 설정
+3. `agentcore deploy --auto-update-on-conflict` — arm64 컨테이너 빌드 → ECR → Runtime 생성 (CodeBuild, Docker 불필요)
+4. `aws bedrock-agentcore-control list-agent-runtimes` — 방금 만든 **Runtime ARN** 조회
+5. `../frontend/.env.local` 에 **ARN·리전·Cognito 정보**를 자동 기록
 
-### 5.3 배포된 에이전트 호출 (IAM 서명)
+> ⏱️ 컨테이너 빌드+배포는 보통 몇 분 걸립니다. `✅ 완료!` 메시지가 나오면 성공입니다.
+> 📋 중간에 출력되는 **Agent Runtime ARN**도 확인해 두세요.
 
-배포된 Runtime은 **boto3**로 호출합니다. AWS SDK가 **SigV4 서명을 자동**으로 처리하므로, AWS 자격증명만 있으면 됩니다. (브라우저·Cognito 불필요)
+> 🔐 **인증 흐름**: 브라우저 → Next.js `route.ts`(Cognito Access Token 발급) → `Authorization: Bearer <token>` 로 AgentCore invoke URL 호출 → Runtime이 JWT 검증 후 실행. 토큰 발급은 **클라이언트 시크릿 없는** Cognito 앱 클라이언트(`USER_PASSWORD_AUTH`)로 합니다.
 
-`invoke_runtime.py`:
-```python
-import boto3, json, uuid
+### 5.3 웹UI를 클라우드 에이전트에 연결
 
-AGENT_ARN = "여기에_배포된_Agent_Runtime_ARN_붙여넣기"
-
-client = boto3.client("bedrock-agentcore", region_name="us-east-1")  # SigV4 자동 서명
-resp = client.invoke_agent_runtime(
-    agentRuntimeArn=AGENT_ARN,
-    runtimeSessionId=uuid.uuid4().hex + "-petcare-session-padding",  # 33자 이상
-    payload=json.dumps({"prompt": "강아지 상태를 점검해줘"}).encode(),
-)
-print(resp["response"].read().decode())
-```
+스크립트가 이미 `frontend/.env.local`을 클라우드 모드로 바꿔놨습니다. 프론트엔드만 다시 띄우면 됩니다.
 
 ```bash
-python invoke_runtime.py
+cd ../frontend
+npm run dev        # http://localhost:3300
 ```
 
-> ✅ 응답 JSON이 출력되면 클라우드에 배포된 에이전트가 IAM 인증만으로 동작한 것입니다.
-> `agentcore invoke '{"prompt": "강아지 상태를 점검해줘"}'` 로도 빠르게 확인할 수 있습니다.
+브라우저에서 **http://localhost:3300** → 채팅에 `강아지 상태 점검해줘` 입력.
 
-> 🔐 **왜 Cognito가 없어도 되나?** AgentCore Runtime 호출은 `bedrock-agentcore:InvokeAgentRuntime` IAM 권한으로 인증됩니다. `authorizerConfiguration`(JWT)을 안 붙이면 IAM 인증이 기본이고, boto3가 알아서 SigV4 서명을 합니다. 고객(브라우저)은 인증을 몰라도 됩니다.
+> ✅ 로컬 때와 **똑같은 화면**이지만, 이제 실제 요청은 **클라우드 AgentCore Runtime**에서 처리됩니다.
+> (로컬 에이전트 `python main.py`는 꺼져 있어도 됩니다.)
+
+`frontend/.env.local`은 이렇게 바뀌어 있습니다 (스크립트 자동 생성):
+```bash
+AGENTCORE_RUNTIME_ARN=arn:aws:bedrock-agentcore:us-east-1:...:runtime/petcare_agent-xxxx
+AGENTCORE_REGION=us-east-1
+COGNITO_POOL_REGION=us-east-1
+COGNITO_CLIENT_ID=...
+COGNITO_USERNAME=...
+COGNITO_PASSWORD=...
+```
+
+> 🔁 **로컬로 되돌리기**: `.env.local`의 위 줄들을 지우고 `AGENT_URL=http://localhost:8080` 한 줄만 남기면 됩니다. `route.ts`는 `AGENTCORE_RUNTIME_ARN`이 있으면 클라우드, 없으면 로컬로 자동 분기합니다.
+
+### 5.4 (선택) CLI로 빠르게 호출 확인
+
+웹UI 없이 배포가 잘 됐는지만 확인하려면:
+
+```bash
+# Cognito 토큰 발급 → 그 토큰으로 invoke
+export $(grep -v '^#' .agentcore_identity_user.env | xargs)
+TOKEN=$(agentcore identity get-cognito-inbound-token)
+agentcore invoke '{"messages":[{"id":"1","role":"user","content":"강아지 상태 점검해줘"}],"runId":"r1","threadId":"t1","state":{},"tools":[],"context":[],"forwardedProps":{}}' --bearer-token "$TOKEN"
+```
+
+> ⚠️ 이 에이전트는 **AG-UI 서버**라서 호출 본문은 `{"prompt": ...}`가 아니라 위처럼 **AG-UI 형식**(`messages/runId/threadId/...`)이어야 합니다. 웹UI(CopilotKit)는 이 형식을 자동으로 만들어 보냅니다.
 
 ---
 
@@ -426,8 +449,8 @@ python invoke_runtime.py
 - [ ] 저장소 clone + 에이전트 코드(`main.py`) 이해
 - [ ] 백엔드 로컬 실행 (`/ping` healthy)
 - [ ] 프론트엔드(CopilotKit) 실행 + 채팅으로 에이전트 동작 확인
-- [ ] AgentCore Runtime에 배포 (IAM 인증)
-- [ ] boto3 / `agentcore invoke`로 배포된 에이전트 호출 성공
+- [ ] `deploy-agentcore.sh`로 AgentCore Runtime 배포 (AG-UI + Cognito)
+- [ ] 웹UI(`npm run dev`)가 **클라우드 에이전트**에 연결되어 채팅 동작 확인
 
 ---
 
@@ -442,9 +465,11 @@ python invoke_runtime.py
 | 도구 실행마다 멈춤 | `BYPASS_TOOL_CONSENT=true` 누락 |
 | 채팅에 "Big update" 배너 | `npm install` 시 `scripts/patch-copilotkit.js`(postinstall)가 자동 제거. 안 되면 `npm run postinstall` |
 | 포트 3300 이미 사용 중 | `frontend/package.json`의 dev 포트 변경 |
-| `agentcore launch` 실패 | AWS 자격증명/리전 확인 (`aws sts get-caller-identity`) |
-| 배포 명령을 못 찾음 | 버전 차이 → `agentcore --help`로 `launch`/`deploy` 확인 |
-| `runtimeSessionId` 오류 | 33자 이상이어야 함 |
+| `deploy-agentcore.sh` 실패 | AWS 자격증명/리전 확인 (`aws sts get-caller-identity`), `.venv` 활성화 + starter toolkit 설치 확인 |
+| 클라우드 연결 후 채팅 무응답 | `frontend/.env.local`에 `AGENTCORE_RUNTIME_ARN`·`COGNITO_*`가 채워졌는지 확인. 비었으면 스크립트 재실행 |
+| `Authorization method mismatch` | 배포는 JWT인데 호출이 SigV4(혹은 반대). 스크립트로 배포했으면 **JWT(Bearer)** 로 호출해야 함 |
+| `agentcore invoke` 400/422 | 본문이 `{"prompt":...}`면 실패. **AG-UI 형식**(`messages/runId/threadId/...`)으로 보내야 함 (5.4 참고) |
+| Runtime이 READY가 안 됨 | `main.py`에 `/ping`(200)이 있는지 확인 (AG-UI도 헬스체크 필요) |
 
 > 🧹 **워크샵 종료 후**: 배포한 AgentCore Runtime과 ECR 이미지를 삭제해 과금을 막으세요.
 

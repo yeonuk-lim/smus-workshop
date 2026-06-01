@@ -118,7 +118,7 @@ workshop/
 ## 9. 확정 상태
 **확정됨**
 - ✅ Agent 시나리오: 스마트싱스 펫케어 — 강아지 불안 케어 (외출+불안↑ → TV 음악)
-- ✅ Agent 스택: Strands Agents → AG-UI → CopilotKit → AgentCore Runtime (IAM 인증, Cognito 없음)
+- ✅ Agent 스택: Strands Agents → AG-UI → CopilotKit → AgentCore Runtime (Cognito JWT 인증, 웹UI 클라우드 연결)
 - ✅ AI 코딩 도구: Claude Code (Bedrock 연동) / IDE: VS Code
 - ✅ 리전: us-east-1, 모델: claude-sonnet-4-5
 - ✅ Module 2 = 재실감지 ML (곤수님 repo) → Module 3 `get_occupancy`가 SageMaker 엔드포인트로 호출, 없으면 Mock 폴백
