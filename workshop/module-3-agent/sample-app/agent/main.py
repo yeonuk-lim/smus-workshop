@@ -9,7 +9,7 @@ import random
 
 from strands import Agent, tool
 from strands.models import BedrockModel
-from ag_ui_strands import StrandsAgent, StrandsAgentConfig, create_strands_app
+from ag_ui_strands import StrandsAgent, StrandsAgentConfig
 from ag_ui.core import RunAgentInput
 from ag_ui.encoder import EventEncoder
 from fastapi import Request
@@ -118,11 +118,15 @@ def make_agui_agent():
 
 
 agent_path = os.getenv("AGENT_PATH", "/invocations")
-# 초기 앱 생성용 (라우팅 등록 목적) — 실제 요청은 아래 오버라이드 핸들러가 처리
-app = create_strands_app(make_agui_agent(), agent_path)
+
+# create_strands_app 대신 FastAPI 앱을 직접 생성.
+# create_strands_app을 쓰면 동일 경로에 핸들러가 중복 등록되어
+# 우리 핸들러가 무시되고 히스토리를 공유하는 원래 핸들러가 실행된다.
+from fastapi import FastAPI
+app = FastAPI()
 
 
-@app.post(agent_path, include_in_schema=False)
+@app.post(agent_path)
 async def invocations(input_data: dict, request: Request):
     """매 요청마다 새 에이전트를 생성해 히스토리 충돌을 방지한다."""
     accept = request.headers.get("accept", "text/event-stream")
