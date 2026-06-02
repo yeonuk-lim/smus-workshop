@@ -87,7 +87,7 @@ flowchart LR
     Loop --> E[최종 응답]
 ```
 
-**동작 방식** (펫케어 예시):
+**동작 방식** (펫케어 예시)
 1. **추론**: "강아지 상태를 점검하려면 먼저 주인이 집에 있는지 봐야겠다"
 2. **도구 선택 → 실행**: `get_occupancy()` 호출 → `away` (결과가 대화에 누적됨)
 3. **다시 추론**: "외출 중이네. 이제 센서를 보자" → `get_device_states()` → `predict_anxiety()`
@@ -130,7 +130,7 @@ git clone https://github.com/yeonuk-lim/smus-petcare-agent.git
 cd smus-petcare-agent
 ```
 
-구조:
+구조
 ```
 smus-petcare-agent/
 ├── agent/        # Strands 에이전트 백엔드 (← 이번 모듈에서 직접 작성해볼 부분)
@@ -245,7 +245,7 @@ from strands.models import BedrockModel
 from ag_ui_strands import StrandsAgent, StrandsAgentConfig, create_strands_app
 
 SYSTEM_PROMPT = """너는 스마트싱스 반려견 펫케어 에이전트다.
-요청을 받으면 도구를 사용해 다음을 수행해라:
+요청을 받으면 도구를 사용해 다음을 수행해라
 1. get_occupancy 로 주인의 재실 여부를 확인한다 (가전 전력 기반 ML 예측, occupancy='home'/'away').
 2. get_device_states 로 디바이스 센서 값을 읽는다.
 3. predict_anxiety 로 강아지의 불안도를 예측한다.
@@ -322,7 +322,7 @@ pip install -r requirements.txt
 AGENT_PATH="/" AWS_REGION=us-east-1 python main.py
 ```
 
-다른 터미널에서 헬스체크:
+다른 터미널에서 헬스체크
 ```bash
 curl http://localhost:8080/ping
 # {"status":"healthy"}
@@ -334,7 +334,7 @@ curl http://localhost:8080/ping
 
 ## 4. 프론트엔드 실행 (CopilotKit 채팅 UI)
 
-새 터미널에서:
+새 터미널에서
 
 ```bash
 cd frontend
@@ -344,7 +344,7 @@ npm run dev                         # http://localhost:3300
 
 > `.env.local`은 기본값이 **로컬 모드**(`AGENT_URL=http://localhost:8080`)로 들어 있어 그대로 쓰면 됩니다.
 
-브라우저에서 **http://localhost:3300** 접속 → 오른쪽 사이드바 채팅에 입력:
+브라우저에서 **http://localhost:3300** 접속 → 오른쪽 사이드바 채팅에 입력
 
 ```
 강아지 상태 점검해줘
@@ -372,7 +372,7 @@ npm run dev                         # http://localhost:3300
 
 ### 미션 전 확인 (필수)
 
-섹션 3·4가 완료된 상태여야 합니다:
+섹션 3·4가 완료된 상태여야 합니다
 - `curl http://localhost:8080/ping` → `{"status":"healthy"}`
 - 브라우저 **http://localhost:3300** → 사이드바 채팅에서 `강아지 상태 점검해줘` 입력 → 에이전트가 도구를 호출하며 결과를 설명하는 걸 확인
 
@@ -380,7 +380,7 @@ npm run dev                         # http://localhost:3300
 
 `agent/main.py`에 새로운 `@tool` 함수를 하나 추가하고, 에이전트가 **새 질문**에 그 도구를 써서 답하도록 만드세요.
 
-예시 아이디어 (하나를 골라도 되고 직접 만들어도 됩니다):
+예시 아이디어 (하나를 골라도 되고 직접 만들어도 됩니다)
 
 | 아이디어 | 설명 | 새 질문 예시 |
 |----------|------|-------------|
@@ -396,7 +396,7 @@ npm run dev                         # http://localhost:3300
 claude
 ```
 
-프롬프트 예시:
+프롬프트 예시
 ```
 agent/main.py에 강아지 물그릇 수위를 확인하는 check_water_bowl 툴을 추가해줘.
 물 부족이면 level='low', 충분하면 'ok'를 반환하는 Mock으로 만들고,
@@ -440,7 +440,7 @@ pip install bedrock-agentcore-starter-toolkit
 ./deploy-agentcore.sh
 ```
 
-스크립트가 하는 일 (한 단계씩):
+스크립트가 하는 일 (한 단계씩)
 1. `agentcore identity setup-cognito` — Cognito 사용자 풀 생성, 자격정보를 `.agentcore_identity_user.env`에 저장
 2. `agentcore configure -e main.py --protocol AGUI --authorizer-config '{...customJWTAuthorizer...}'` — **AG-UI 프로토콜 + Cognito JWT 인증**으로 배포 설정
 3. `agentcore deploy --auto-update-on-conflict` — arm64 컨테이너 빌드 → ECR → Runtime 생성 (CodeBuild, Docker 불필요)
@@ -466,7 +466,7 @@ npm run dev        # http://localhost:3300
 > ✅ 로컬 때와 **똑같은 화면**이지만, 이제 실제 요청은 **클라우드 AgentCore Runtime**에서 처리됩니다.
 > (로컬 에이전트 `python main.py`는 꺼져 있어도 됩니다.)
 
-`frontend/.env.local`은 이렇게 바뀌어 있습니다 (스크립트 자동 생성):
+`frontend/.env.local`은 이렇게 바뀌어 있습니다 (스크립트 자동 생성)
 ```bash
 AGENTCORE_RUNTIME_ARN=arn:aws:bedrock-agentcore:us-east-1:...:runtime/petcare_agent-xxxx
 AGENTCORE_REGION=us-east-1
@@ -480,7 +480,7 @@ COGNITO_PASSWORD=...
 
 ### 5.4 (선택) CLI로 빠르게 호출 확인
 
-웹UI 없이 배포가 잘 됐는지만 확인하려면:
+웹UI 없이 배포가 잘 됐는지만 확인하려면
 
 ```bash
 # Cognito 토큰 발급 → 그 토큰으로 invoke
@@ -546,7 +546,7 @@ npm install --omit=dev       # node_modules 설치 (node 없으면 먼저 설치
 npx next start -p 3000       # 포트 3000으로 실행
 ```
 
-> Node.js가 없으면 먼저 설치:
+> Node.js가 없으면 먼저 설치
 > ```bash
 > curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo bash -
 > sudo yum install -y nodejs
@@ -554,7 +554,7 @@ npx next start -p 3000       # 포트 3000으로 실행
 
 #### Step 3 — 브라우저로 접속해 에이전트와 대화
 
-브라우저에서 **`http://<EC2_PUBLIC_IP>:3000`** 접속 → 채팅창에 입력:
+브라우저에서 **`http://<EC2_PUBLIC_IP>:3000`** 접속 → 채팅창에 입력
 
 ```
 강아지 상태 점검해줘
