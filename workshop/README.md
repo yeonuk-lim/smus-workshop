@@ -12,7 +12,7 @@
 
 | 모듈 | 내용 | 담당 | 시간 |
 |------|------|------|------|
-| **[Module 1](module-1-setup/README.md)** | SMUS 셋업 + 데이터 업로드 + Space + VS Code 연결 + Claude Code(Bedrock) | SA | ~1.5h |
+| **[Module 1](module-1-setup/README.md)** | SMUS 셋업 + 데이터 업로드 + Space + VS Code 연결 + Claude Code(Bedrock) | ~1.5h |
 | **[Module 2](https://github.com/gonsoomoon-ml/ml-classification-with-agentic-coding)** | 재실감지(occupancy) ML 분류 — XGBoost + SageMaker (agentic coding) | ~3h |
 | **[Module 3](module-3-agent/README.md)** | 펫케어 AI Agent — Strands + AG-UI + CopilotKit + AgentCore Runtime | ~1.5h |
 
