@@ -128,13 +128,24 @@ app = FastAPI()
 
 @app.post(agent_path)
 async def invocations(input_data: dict, request: Request):
-    """매 요청마다 새 에이전트를 생성해 히스토리 충돌을 방지한다."""
+    """매 요청마다 새 에이전트를 생성하고, 이전 대화 히스토리를 제거해
+    CopilotKit이 보내는 tool_use 히스토리 충돌(ValidationException)을 방지한다."""
     accept = request.headers.get("accept", "text/event-stream")
     encoder = EventEncoder(accept=accept)
 
     async def generate():
         agui = make_agui_agent()
-        run_input = RunAgentInput(**input_data)
+        # RunAgentInput 파싱 전에 messages를 정리한다.
+        # CopilotKit은 이전 대화(tool_use 포함)를 통째로 보내는데,
+        # 이 히스토리가 Strands Agent에 주입되면 tool_use ID 불일치로
+        # ValidationException이 발생한다. 마지막 user 메시지만 남긴다.
+        msgs = input_data.get("messages") or []
+        last_user = next(
+            (m for m in reversed(msgs) if isinstance(m, dict) and m.get("role") == "user"),
+            None,
+        )
+        clean = {**input_data, "messages": [last_user] if last_user else []}
+        run_input = RunAgentInput(**clean)
         async for event in agui.run(run_input):
             yield encoder.encode(event)
 
