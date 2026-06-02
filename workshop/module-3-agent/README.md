@@ -103,15 +103,15 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-    A["① 애플리케이션 레이어<br/>에이전트 로직 — <b>Strands Agents</b><br/>(우리가 작성하는 코드: 4 tools + prompt)"]
-    B["② 운영/인프라 레이어<br/><b>Amazon Bedrock AgentCore</b><br/>Runtime · Memory · Gateway · Identity · Observability<br/>(이 워크샵은 Runtime만 사용 — 서버리스 실행 + 세션 격리)"]
-    C["③ 모델 레이어<br/><b>Amazon Bedrock</b> (Claude LLM)<br/>추론/판단"]
-    A --> B --> C
+    C["① 모델 레이어<br/><b>Amazon Bedrock</b> (Claude LLM)<br/>추론/판단"]
+    A["② 애플리케이션 레이어<br/>에이전트 로직 — <b>Strands Agents</b><br/>(우리가 작성하는 코드: 4 tools + prompt)"]
+    B["③ 운영/인프라 레이어<br/><b>Amazon Bedrock AgentCore</b><br/>Runtime · Memory · Gateway · Identity · Observability<br/>(이 워크샵은 Runtime만 사용 — 서버리스 실행 + 세션 격리)"]
+    C --> A --> B
 ```
 
-- **① Strands** = 에이전트 로직(무엇을 어떻게 할지)을 코드로 작성
-- **② AgentCore** = 그 에이전트를 **배포·실행·운영**하는 인프라 레이어
-- **③ Bedrock** = 에이전트가 추론에 사용하는 **LLM(모델)** 제공
+- **① Bedrock** = 에이전트가 추론에 사용하는 **LLM(모델)** 제공
+- **② Strands** = 에이전트 로직(무엇을 어떻게 할지)을 코드로 작성
+- **③ AgentCore** = 그 에이전트를 **배포·실행·운영**하는 인프라 레이어
 - AgentCore는 7개 매니지드 서비스(Runtime / Memory / Identity / Gateway / Code Interpreter / Browser / Observability)로 구성되며, **필요한 것만 골라 쓸 수 있습니다.**
 - **이 워크샵에서는 `Runtime` 하나만** 사용합니다 — 우리가 만든 Strands 에이전트를 서버리스로 배포·실행하는 부분(섹션 5).
 
