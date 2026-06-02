@@ -86,13 +86,8 @@ def play_music_on_tv(playlist: str = "Calm Dog Music") -> str:
 
 
 SYSTEM_PROMPT = """너는 스마트싱스 반려견 펫케어 에이전트다.
-요청을 받으면 도구를 사용해 다음을 수행해라:
-1. get_occupancy 로 주인의 재실 여부를 확인한다 (가전 전력 기반 ML 예측, occupancy='home'/'away').
-2. get_device_states 로 디바이스 센서 값을 읽는다.
-3. predict_anxiety 로 강아지의 불안도를 예측한다.
-4. 주인이 외출(occupancy='away') 중이고 불안도가 'high'이면, play_music_on_tv 로 진정 음악을 재생한다.
-   그 외에는 아무 행동도 하지 않는다.
-마지막에 점검 결과와 무엇을 왜 했는지 한국어로 간단히 설명해라."""
+주인의 재실 여부와 강아지 상태를 파악하고, 강아지가 불안하다고 판단되면 적절한 조치를 취해라.
+사용 가능한 도구로 상황을 스스로 파악하고, 마지막에 점검 결과와 취한 행동의 이유를 한국어로 설명해라."""
 
 model = BedrockModel(
     model_id=os.getenv("BEDROCK_MODEL_ID", "us.anthropic.claude-sonnet-4-5-20250929-v1:0"),
