@@ -10,6 +10,10 @@ import random
 from strands import Agent, tool
 from strands.models import BedrockModel
 from ag_ui_strands import StrandsAgent, StrandsAgentConfig, create_strands_app
+from ag_ui.core import RunAgentInput
+from ag_ui.encoder import EventEncoder
+from fastapi import Request
+from fastapi.responses import StreamingResponse
 
 
 # ---- 도구(Tool): 디바이스 연동/ML은 전부 Mock ----
@@ -94,22 +98,43 @@ model = BedrockModel(
     region_name=os.getenv("AWS_REGION", "us-east-1"),
 )
 
-agent = Agent(
-    model=model,
-    system_prompt=SYSTEM_PROMPT,
-    tools=[get_occupancy, get_device_states, predict_anxiety, play_music_on_tv],
-)
+TOOLS = [get_occupancy, get_device_states, predict_anxiety, play_music_on_tv]
 
-agui_agent = StrandsAgent(
-    agent=agent,
-    name="petcare_agent",
-    description="스마트싱스 펫케어 - 강아지 불안 케어 에이전트",
-    config=StrandsAgentConfig(),
-)
 
-# 로컬 CopilotKit은 "/"로 접근, AgentCore Runtime은 "/invocations"로 접근
+def make_agent():
+    """요청마다 새 Agent 인스턴스를 생성해 대화 히스토리를 초기화한다.
+    동일 인스턴스를 재사용하면 이전 tool_use 블록이 히스토리에 남아
+    Bedrock ValidationException이 발생할 수 있다."""
+    return Agent(model=model, system_prompt=SYSTEM_PROMPT, tools=TOOLS)
+
+
+def make_agui_agent():
+    return StrandsAgent(
+        agent=make_agent(),
+        name="petcare_agent",
+        description="스마트싱스 펫케어 - 강아지 불안 케어 에이전트",
+        config=StrandsAgentConfig(),
+    )
+
+
 agent_path = os.getenv("AGENT_PATH", "/invocations")
-app = create_strands_app(agui_agent, agent_path)
+# 초기 앱 생성용 (라우팅 등록 목적) — 실제 요청은 아래 오버라이드 핸들러가 처리
+app = create_strands_app(make_agui_agent(), agent_path)
+
+
+@app.post(agent_path, include_in_schema=False)
+async def invocations(input_data: dict, request: Request):
+    """매 요청마다 새 에이전트를 생성해 히스토리 충돌을 방지한다."""
+    accept = request.headers.get("accept", "text/event-stream")
+    encoder = EventEncoder(accept=accept)
+
+    async def generate():
+        agui = make_agui_agent()
+        run_input = RunAgentInput(**input_data)
+        async for event in agui.run(run_input):
+            yield encoder.encode(event)
+
+    return StreamingResponse(generate(), media_type=encoder.get_content_type())
 
 
 # AgentCore Runtime이 READY로 판단하려면 /ping 200이 필요하다 (AG-UI 프로토콜에서도 동일)
